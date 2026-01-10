@@ -59,25 +59,21 @@ class ETFPCFFetcher(object):
             "date": self.trade_date,
             "fetched_zip_path": self.trade_date + ".zip",
             "release_body": (
-                f"# [{self.trade_date}] 沪深ETF PCF清单获取数量：{fund_list_len}"
+                f"### [{self.trade_date}] 沪深ETF PCF清单获取数量：{fund_list_len}"
             ),
         }
         with open("data.json", "w", encoding="utf-8") as f:
             json.dump(data, f, indent=4, ensure_ascii=False)
 
     def run_today(self):
-        # fund_list_df = self.get_fund_list_df()
-        # fund_list_df_sse = fund_list_df.filter(pl.col("代码").str.ends_with("SH"))
-        # fund_list_df_szse = fund_list_df.filter(pl.col("代码").str.ends_with("SZ"))
-        # self.get_pcf_files(fund_list_df_sse["代码"].to_list(), location="SH")
-        # self.get_pcf_files(fund_list_df_szse["代码"].to_list(), location="SZ")
-
-        # Test
-        self.get_pcf_files(["588000.SH", "588080.SH"], location="SH")
-        self.get_pcf_files(["159915.SZ", "159998.SZ"], location="SZ")
+        fund_list_df = self.get_fund_list_df()
+        fund_list_df_sse = fund_list_df.filter(pl.col("代码").str.ends_with("SH"))
+        fund_list_df_szse = fund_list_df.filter(pl.col("代码").str.ends_with("SZ"))
+        self.get_pcf_files(fund_list_df_sse["代码"].to_list(), location="SH")
+        self.get_pcf_files(fund_list_df_szse["代码"].to_list(), location="SZ")
 
         self.compress_into_zip_file()
-        self.generate_github_release_metadata(4)
+        self.generate_github_release_metadata(len(fund_list_df))
         return
 
 
