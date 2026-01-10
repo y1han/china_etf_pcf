@@ -29,22 +29,11 @@ jobs:
 
       - name: Create Release
         id: create_release
-        uses: actions/create-release@latest
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: softprops/action-gh-release@v2
         with:
+          files: |
+            ${{ fromJson(env.DATA_JSON).fetched_zip_path }}
           tag_name: ${{ fromJson(env.DATA_JSON).date }}
-          release_name: ${{ fromJson(env.DATA_JSON).date }}
           body: ${{ fromJson(env.DATA_JSON).release_body }}
           draft: false
           prerelease: false
-
-      - name: Upload Release Asset Fetched Zip File
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ${{ fromJson(env.DATA_JSON).fetched_zip_path }}
-          asset_name: ${{ fromJson(env.DATA_JSON).date }}.zip
-          asset_content_type: application/zip
