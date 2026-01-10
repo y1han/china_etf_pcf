@@ -11,6 +11,8 @@ from tqdm import tqdm
 
 
 class ETFPCFFetcher(object):
+    time_gap: float = 1.1
+
     def __init__(self):
         self.trade_date: str = pl.DataFrame(ak.tool_trade_date_hist_sina()).filter(
             pl.col("trade_date") <= datetime.now().date()
@@ -38,12 +40,16 @@ class ETFPCFFetcher(object):
         if not location_path.exists():
             location_path.mkdir(exist_ok=True, parents=True)
         for symbol in tqdm(symbol_list):
+            start_time = datetime.now()
             if location == "SH":
                 urllib.request.urlretrieve(self.get_sse_pcf_url(symbol.split(".")[0]), location_path / f"{symbol}.xml")
             elif location == "SZ":
                 urllib.request.urlretrieve(self.get_szse_pcf_url(symbol.split(".")[0], self.trade_date),
                                            location_path / f"{symbol}.xml")
-            time.sleep(1)
+            end_time = datetime.now()
+            run_seconds = (end_time - start_time).total_seconds()
+            if run_seconds < self.time_gap:
+                time.sleep(self.time_gap - run_seconds)
 
     def compress_into_zip_file(self):
         shutil.make_archive(self.trade_date, "zip", self.file_path)
@@ -60,14 +66,18 @@ class ETFPCFFetcher(object):
             json.dump(data, f, indent=4, ensure_ascii=False)
 
     def run_today(self):
-        fund_list_df = self.get_fund_list_df()
-        fund_list_df_sse = fund_list_df.filter(pl.col("代码").str.ends_with("SH"))
-        fund_list_df_szse = fund_list_df.filter(pl.col("代码").str.ends_with("SZ"))
-        self.get_pcf_files(fund_list_df_sse["代码"].to_list(), location="SH")
-        self.get_pcf_files(fund_list_df_szse["代码"].to_list(), location="SZ")
+        # fund_list_df = self.get_fund_list_df()
+        # fund_list_df_sse = fund_list_df.filter(pl.col("代码").str.ends_with("SH"))
+        # fund_list_df_szse = fund_list_df.filter(pl.col("代码").str.ends_with("SZ"))
+        # self.get_pcf_files(fund_list_df_sse["代码"].to_list(), location="SH")
+        # self.get_pcf_files(fund_list_df_szse["代码"].to_list(), location="SZ")
+
+        # Test
+        self.get_pcf_files(["588000.SH", "588080.SH"], location="SH")
+        self.get_pcf_files(["159915.SZ", "159998.SZ"], location="SZ")
 
         self.compress_into_zip_file()
-        self.generate_github_release_metadata(len(fund_list_df))
+        self.generate_github_release_metadata(4)
         return
 
 
