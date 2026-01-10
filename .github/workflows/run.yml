@@ -2,7 +2,7 @@ name: Run
 on:
   workflow_dispatch:
   schedule:
-    - cron: "0 0 9 * * 1,2,3,4,5"
+    - cron: "0 2 * * 1,2,3,4,5"
 jobs:
   run:
     runs-on: ubuntu-latest
