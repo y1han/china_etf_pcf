@@ -65,6 +65,7 @@ class ETFPCFFetcher(object):
             json.dump(data, f, indent=4, ensure_ascii=False)
 
     def aggregate_data(self):
+        # TODO Aggregate data into single file
         return
 
     def run_today(self):
@@ -83,7 +84,7 @@ class ETFPCFFetcher(object):
 if __name__ == '__main__':
     epf = ETFPCFFetcher()
     today_date = datetime.now().strftime("%Y%m%d")
-    # if epf.trade_date == today_date:
-    #     epf.run_today()
-    # else:
-    #     raise AttributeError(f"{today_date} Not Trading Day!")
+    if epf.trade_date == today_date:
+        epf.run_today()
+    else:
+        raise AttributeError(f"{today_date} Not Trading Day!")
