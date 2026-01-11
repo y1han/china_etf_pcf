@@ -21,8 +21,9 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-      - name: Run
-        run: python main.py
+
+      - name: Run Fetcher
+        run: python fetcher.py
 
       - name: Get JSON Results
         run: echo "DATA_JSON=$(jq -c . < data.json)" >> $GITHUB_ENV
@@ -32,7 +33,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            ${{ fromJson(env.DATA_JSON).fetched_zip_path }}
+            ${{ fromJson(env.DATA_JSON).date }}.zip
           tag_name: ${{ fromJson(env.DATA_JSON).date }}
           body: ${{ fromJson(env.DATA_JSON).release_body }}
           draft: false

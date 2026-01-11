@@ -35,7 +35,7 @@ class ETFPCFFetcher(object):
     def get_szse_pcf_url(symbol: str, trade_date: str) -> str:
         return f"https://reportdocs.static.szse.cn/files/text/ETFDown/pcf_{symbol}_{trade_date}.xml"
 
-    def get_pcf_files(self, symbol_list: list[str], *, location: str):
+    def get_pcf_files(self, symbol_list: list[str], *, location: str) -> None:
         location_path = self.file_path / location
         if not location_path.exists():
             location_path.mkdir(exist_ok=True, parents=True)
@@ -51,13 +51,12 @@ class ETFPCFFetcher(object):
             if run_seconds < self.time_gap:
                 time.sleep(self.time_gap - run_seconds)
 
-    def compress_into_zip_file(self):
+    def compress_into_zip_file(self) -> None:
         shutil.make_archive(self.trade_date, "zip", self.file_path)
 
-    def generate_github_release_metadata(self, fund_list_len: int):
+    def generate_github_release_metadata(self, fund_list_len: int) -> None:
         data = {
             "date": self.trade_date,
-            "fetched_zip_path": self.trade_date + ".zip",
             "release_body": (
                 f"### [{self.trade_date}] 沪深ETF PCF清单获取数量：{fund_list_len}"
             ),
@@ -65,14 +64,18 @@ class ETFPCFFetcher(object):
         with open("data.json", "w", encoding="utf-8") as f:
             json.dump(data, f, indent=4, ensure_ascii=False)
 
+    def aggregate_data(self):
+        return
+
     def run_today(self):
         fund_list_df = self.get_fund_list_df()
         fund_list_df_sse = fund_list_df.filter(pl.col("代码").str.ends_with("SH"))
         fund_list_df_szse = fund_list_df.filter(pl.col("代码").str.ends_with("SZ"))
         self.get_pcf_files(fund_list_df_sse["代码"].to_list(), location="SH")
         self.get_pcf_files(fund_list_df_szse["代码"].to_list(), location="SZ")
-
         self.compress_into_zip_file()
+
+        self.aggregate_data()
         self.generate_github_release_metadata(len(fund_list_df))
         return
 
@@ -80,7 +83,6 @@ class ETFPCFFetcher(object):
 if __name__ == '__main__':
     epf = ETFPCFFetcher()
     today_date = datetime.now().strftime("%Y%m%d")
-    epf.run_today()
     # if epf.trade_date == today_date:
     #     epf.run_today()
     # else:
