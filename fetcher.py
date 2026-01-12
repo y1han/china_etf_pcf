@@ -18,7 +18,7 @@ from utils.mapping import Mapping
 
 
 class ETFPCFFetcher(object):
-    time_gap: float = 1.1
+    time_gap: float = 0.5
     sse_tag: str = "SH"
     szse_tag: str = "SZ"
 
