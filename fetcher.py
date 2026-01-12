@@ -13,16 +13,18 @@ import polars as pl
 import akshare as ak
 from tqdm import tqdm
 
+from utils.mapping import Mapping
+
 
 class ETFPCFFetcher(object):
     time_gap: float = 1.1
     sse_tag: str = "SH"
     szse_tag: str = "SZ"
 
-    def __init__(self):
+    def __init__(self, trade_date: str | None = None):
         self.trade_date: str = pl.DataFrame(ak.tool_trade_date_hist_sina()).filter(
             pl.col("trade_date") <= datetime.now().date()
-        )["trade_date"][-1].strftime("%Y%m%d")
+        )["trade_date"][-1].strftime("%Y%m%d") if trade_date is None else trade_date
         self.file_path: Path = Path("temp") / self.trade_date
         if not self.file_path.exists():
             self.file_path.mkdir(exist_ok=True, parents=True)
@@ -53,6 +55,7 @@ class ETFPCFFetcher(object):
     @classmethod
     def xml_postprocessor(cls, _, key, value):
         # XML standard requires lower case bools
+        if key in ["InstrumentID", "UnderlyingSecurityID", "UnderlyingSecurityIDSource"]: return key, value
         if value == "true": value = "True"
         if value == "false": value = "False"
         return key, cls.auto_cast_str(value)
@@ -118,7 +121,8 @@ class ETFPCFFetcher(object):
             pl.col("FundInstrumentID").cast(pl.String).str.zfill(6) + pl.lit(f".{self.sse_tag}")
         )
         component_data = pl.concat(component_data, how="diagonal_relaxed").with_columns(
-            pl.col("InstrumentID").cast(pl.String).str.zfill(6) + pl.lit(f".{self.sse_tag}"),
+            pl.col("InstrumentID") + pl.lit(".") +
+            pl.col("UnderlyingSecurityID").cast(pl.String).replace(Mapping.exchange_code_map),
             pl.col("FundInstrumentID").cast(pl.String).str.zfill(6) + pl.lit(f".{self.sse_tag}")
         )
         return info_data, component_data
@@ -150,7 +154,8 @@ class ETFPCFFetcher(object):
             pl.col("SecurityID").cast(pl.String).str.zfill(6) + pl.lit(f".{self.szse_tag}")
         ).drop(["@xmlns", "Version"])
         component_data = pl.concat(component_data, how="diagonal_relaxed").with_columns(
-            pl.col("UnderlyingSecurityID").cast(pl.String).str.zfill(6) + pl.lit(f".{self.szse_tag}"),
+            pl.col("UnderlyingSecurityID") + pl.lit(".") +
+            pl.col("UnderlyingSecurityIDSource").cast(pl.String).replace(Mapping.exchange_code_map),
             pl.col("SecurityID").cast(pl.String).str.zfill(6) + pl.lit(f".{self.szse_tag}")
         )
         return info_data, component_data
@@ -163,7 +168,36 @@ class ETFPCFFetcher(object):
         sse_component.write_parquet(f"{self.trade_date}_{self.sse_tag}_COMPONENT.parquet")
         szse_info.write_parquet(f"{self.trade_date}_{self.szse_tag}_INFO.parquet")
         szse_component.write_parquet(f"{self.trade_date}_{self.szse_tag}_COMPONENT.parquet")
+
+        info_df = self.aggregate_fund_info(sse_info, szse_info)
+        comp_df = self.aggregate_fund_comp(sse_component, szse_component)
+        info_df.write_parquet(f"{self.trade_date}_INFO.parquet")
+        comp_df.write_parquet(f"{self.trade_date}_COMPONENT.parquet")
         return
+
+    def aggregate_fund_info(info_sh: pl.DataFrame, info_sz: pl.DataFrame) -> pl.DataFrame:
+        tmp_info_sh = clean_data(info_sh, Mapping.info_sh_map).with_columns(
+            (pl.col(InfoSchema.creation_redemption_status.name).is_in([1, 2])).cast(pl.Int64).alias(
+                InfoSchema.allow_creation.name),
+            (pl.col(InfoSchema.creation_redemption_status.name).is_in([1, 3])).cast(pl.Int64).alias(
+                InfoSchema.allow_redemption.name),
+        ).drop(InfoSchema.creation_redemption_status.name)
+        tmp_info_sz = clean_data(info_sz, Mapping.info_sz_map).with_columns(
+            pl.col("^.*creation_limit.*$").replace(0, None),
+            pl.col("^.*redemption_limit.*$").replace(0, None),
+            (pl.col(InfoSchema.publish_iopv_flag.name) == "Y").cast(pl.Int64),
+            (pl.col(InfoSchema.allow_creation.name) == "Y").cast(pl.Int64),
+            (pl.col(InfoSchema.allow_redemption.name) == "Y").cast(pl.Int64),
+        )
+        return pl.concat([tmp_info_sh, tmp_info_sz], how="diagonal_relaxed")
+
+    def aggregate_fund_components(comp_sh: pl.DataFrame, comp_sz: pl.DataFrame) -> pl.DataFrame:
+        tmp_comp_sh = clean_data(comp_sh, Mapping.comp_sh_map).with_columns(
+            pl.col(ComponentSchema.creation_substitution_cash_amount.name).alias(
+                ComponentSchema.redemption_substitution_cash_amount.name)
+        )
+        tmp_comp_sz = clean_data(comp_sz, Mapping.comp_sz_map)
+        return pl.concat([tmp_comp_sh, tmp_comp_sz], how="diagonal_relaxed")
 
     def run_today(self):
         fund_list_df = self.get_fund_list_df()

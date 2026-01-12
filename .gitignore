@@ -4,3 +4,4 @@ temp
 demo_*
 *.parquet
 *.zip
+*.pyc
