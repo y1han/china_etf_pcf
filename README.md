@@ -8,7 +8,7 @@ Daily PCF Fetcher on China ETFs listed in Shanghai and Shenzhen
 
 - Check Daily Results in **Release** Section
 - Original XML Files are compressed in `${trade_date}.zip`
-- Four `****_RAW parquets` are aggregated data from original files
+- Four `****_RAW.parquet` files are aggregated and unprocessed data from original files
 - `${trade_date}_INFO.parquet` and `${trade_date}_COMPONENT.parquet` are aggregated and cleansed results from above
   files, and has schemas like below:
 
