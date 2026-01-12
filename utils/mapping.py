@@ -89,6 +89,7 @@ class Mapping(object):
         'UnderlyingSecurityIDSource': ComponentSchema.underlying_security_market,
     }
 
+    @staticmethod
     def clean_data(raw_data: pl.DataFrame, schema_map: dict[str, InfoSchema | ComponentSchema]) -> pl.DataFrame:
         return raw_data.select([key for key in schema_map.keys() if key in raw_data.columns]).rename(
             {k: v.name for k, v in schema_map.items()}, strict=False

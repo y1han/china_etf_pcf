@@ -13,6 +13,7 @@ import polars as pl
 import akshare as ak
 from tqdm import tqdm
 
+from utils.schema import InfoSchema, ComponentSchema
 from utils.mapping import Mapping
 
 
@@ -121,8 +122,14 @@ class ETFPCFFetcher(object):
             pl.col("FundInstrumentID").cast(pl.String).str.zfill(6) + pl.lit(f".{self.sse_tag}")
         )
         component_data = pl.concat(component_data, how="diagonal_relaxed").with_columns(
-            pl.col("InstrumentID") + pl.lit(".") +
-            pl.col("UnderlyingSecurityID").cast(pl.String).replace(Mapping.exchange_code_map),
+            pl.col("InstrumentID") +
+            pl.when(pl.col("UnderlyingSecurityID") == "9999").then(
+                pl.lit("")
+            ).otherwise(
+                pl.lit(".") + pl.col("UnderlyingSecurityID").replace(
+                    Mapping.exchange_code_map
+                )
+            ),
             pl.col("FundInstrumentID").cast(pl.String).str.zfill(6) + pl.lit(f".{self.sse_tag}")
         )
         return info_data, component_data
@@ -154,8 +161,14 @@ class ETFPCFFetcher(object):
             pl.col("SecurityID").cast(pl.String).str.zfill(6) + pl.lit(f".{self.szse_tag}")
         ).drop(["@xmlns", "Version"])
         component_data = pl.concat(component_data, how="diagonal_relaxed").with_columns(
-            pl.col("UnderlyingSecurityID") + pl.lit(".") +
-            pl.col("UnderlyingSecurityIDSource").cast(pl.String).replace(Mapping.exchange_code_map),
+            pl.col("UnderlyingSecurityID") +
+            pl.when(pl.col("UnderlyingSecurityIDSource") == "9999").then(
+                pl.lit("")
+            ).otherwise(
+                pl.lit(".") + pl.col("UnderlyingSecurityIDSource").replace(
+                    Mapping.exchange_code_map
+                )
+            ),
             pl.col("SecurityID").cast(pl.String).str.zfill(6) + pl.lit(f".{self.szse_tag}")
         )
         return info_data, component_data
@@ -164,25 +177,26 @@ class ETFPCFFetcher(object):
         sse_info, sse_component = self.aggregate_data_sse()
         szse_info, szse_component = self.aggregate_data_szse()
 
-        sse_info.write_parquet(f"{self.trade_date}_{self.sse_tag}_INFO.parquet")
-        sse_component.write_parquet(f"{self.trade_date}_{self.sse_tag}_COMPONENT.parquet")
-        szse_info.write_parquet(f"{self.trade_date}_{self.szse_tag}_INFO.parquet")
-        szse_component.write_parquet(f"{self.trade_date}_{self.szse_tag}_COMPONENT.parquet")
+        sse_info.write_parquet(f"{self.trade_date}_{self.sse_tag}_INFO_RAW.parquet")
+        sse_component.write_parquet(f"{self.trade_date}_{self.sse_tag}_COMPONENT_RAW.parquet")
+        szse_info.write_parquet(f"{self.trade_date}_{self.szse_tag}_INFO_RAW.parquet")
+        szse_component.write_parquet(f"{self.trade_date}_{self.szse_tag}_COMPONENT_RAW.parquet")
 
         info_df = self.aggregate_fund_info(sse_info, szse_info)
-        comp_df = self.aggregate_fund_comp(sse_component, szse_component)
+        comp_df = self.aggregate_fund_components(sse_component, szse_component)
         info_df.write_parquet(f"{self.trade_date}_INFO.parquet")
         comp_df.write_parquet(f"{self.trade_date}_COMPONENT.parquet")
         return
 
+    @staticmethod
     def aggregate_fund_info(info_sh: pl.DataFrame, info_sz: pl.DataFrame) -> pl.DataFrame:
-        tmp_info_sh = clean_data(info_sh, Mapping.info_sh_map).with_columns(
+        tmp_info_sh = Mapping.clean_data(info_sh, Mapping.info_sh_map).with_columns(
             (pl.col(InfoSchema.creation_redemption_status.name).is_in([1, 2])).cast(pl.Int64).alias(
                 InfoSchema.allow_creation.name),
             (pl.col(InfoSchema.creation_redemption_status.name).is_in([1, 3])).cast(pl.Int64).alias(
                 InfoSchema.allow_redemption.name),
         ).drop(InfoSchema.creation_redemption_status.name)
-        tmp_info_sz = clean_data(info_sz, Mapping.info_sz_map).with_columns(
+        tmp_info_sz = Mapping.clean_data(info_sz, Mapping.info_sz_map).with_columns(
             pl.col("^.*creation_limit.*$").replace(0, None),
             pl.col("^.*redemption_limit.*$").replace(0, None),
             (pl.col(InfoSchema.publish_iopv_flag.name) == "Y").cast(pl.Int64),
@@ -191,12 +205,13 @@ class ETFPCFFetcher(object):
         )
         return pl.concat([tmp_info_sh, tmp_info_sz], how="diagonal_relaxed")
 
+    @staticmethod
     def aggregate_fund_components(comp_sh: pl.DataFrame, comp_sz: pl.DataFrame) -> pl.DataFrame:
-        tmp_comp_sh = clean_data(comp_sh, Mapping.comp_sh_map).with_columns(
+        tmp_comp_sh = Mapping.clean_data(comp_sh, Mapping.comp_sh_map).with_columns(
             pl.col(ComponentSchema.creation_substitution_cash_amount.name).alias(
                 ComponentSchema.redemption_substitution_cash_amount.name)
         )
-        tmp_comp_sz = clean_data(comp_sz, Mapping.comp_sz_map)
+        tmp_comp_sz = Mapping.clean_data(comp_sz, Mapping.comp_sz_map)
         return pl.concat([tmp_comp_sh, tmp_comp_sz], how="diagonal_relaxed")
 
     def run_today(self):

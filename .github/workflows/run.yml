@@ -34,10 +34,10 @@ jobs:
         with:
           files: |
             ${{ fromJson(env.DATA_JSON).date }}.zip
-            ${{ fromJson(env.DATA_JSON).date }}_SH_INFO.parquet
-            ${{ fromJson(env.DATA_JSON).date }}_SH_COMPONENT.parquet
-            ${{ fromJson(env.DATA_JSON).date }}_SZ_INFO.parquet
-            ${{ fromJson(env.DATA_JSON).date }}_SZ_COMPONENT.parquet
+            ${{ fromJson(env.DATA_JSON).date }}_SH_INFO_RAW.parquet
+            ${{ fromJson(env.DATA_JSON).date }}_SH_COMPONENT_RAW.parquet
+            ${{ fromJson(env.DATA_JSON).date }}_SZ_INFO_RAW.parquet
+            ${{ fromJson(env.DATA_JSON).date }}_SZ_COMPONENT_RAW.parquet
             ${{ fromJson(env.DATA_JSON).date }}_INFO.parquet
             ${{ fromJson(env.DATA_JSON).date }}_COMPONENT.parquet
           tag_name: ${{ fromJson(env.DATA_JSON).date }}
