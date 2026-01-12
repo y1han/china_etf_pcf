@@ -122,11 +122,12 @@ class ETFPCFFetcher(object):
             pl.col("FundInstrumentID").cast(pl.String).str.zfill(6) + pl.lit(f".{self.sse_tag}")
         )
         component_data = pl.concat(component_data, how="diagonal_relaxed").with_columns(
-            pl.col("InstrumentID") +
-            pl.when(pl.col("UnderlyingSecurityID") == "9999").then(
-                pl.lit("")
+            pl.when(pl.col("UnderlyingSecurityID") == "9999").then(  # Other
+                pl.col("InstrumentID")
+            ).when(pl.col("UnderlyingSecurityID") == "103").then(  # HK
+                pl.col("InstrumentID").str.zfill(5) + pl.lit(".HK")
             ).otherwise(
-                pl.lit(".") + pl.col("UnderlyingSecurityID").replace(
+                pl.col("InstrumentID").str.zfill(6) + pl.lit(".") + pl.col("UnderlyingSecurityID").replace(
                     Mapping.exchange_code_map
                 )
             ),
@@ -161,11 +162,12 @@ class ETFPCFFetcher(object):
             pl.col("SecurityID").cast(pl.String).str.zfill(6) + pl.lit(f".{self.szse_tag}")
         ).drop(["@xmlns", "Version"])
         component_data = pl.concat(component_data, how="diagonal_relaxed").with_columns(
-            pl.col("UnderlyingSecurityID") +
-            pl.when(pl.col("UnderlyingSecurityIDSource") == "9999").then(
-                pl.lit("")
+            pl.when(pl.col("UnderlyingSecurityIDSource") == "9999").then(  # Other
+                pl.col("UnderlyingSecurityID")
+            ).when(pl.col("UnderlyingSecurityIDSource") == "103").then(  # HK
+                pl.col("UnderlyingSecurityID").str.zfill(5) + pl.lit(".HK")
             ).otherwise(
-                pl.lit(".") + pl.col("UnderlyingSecurityIDSource").replace(
+                pl.col("UnderlyingSecurityID").str.zfill(6) + pl.lit(".") + pl.col("UnderlyingSecurityIDSource").replace(
                     Mapping.exchange_code_map
                 )
             ),
