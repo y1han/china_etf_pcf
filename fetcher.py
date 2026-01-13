@@ -61,6 +61,20 @@ class ETFPCFFetcher(object):
         if value == "false": value = "False"
         return key, cls.auto_cast_str(value)
 
+    @staticmethod
+    def convert_underlying_code(code_col: str, source_col: str):
+        return pl.when(pl.col(source_col) == "9999").then(  # Other
+            pl.col(code_col)
+        ).when(pl.col(source_col) == "103").then(  # HK
+            pl.col(code_col).str.zfill(5) + pl.lit(".HK")
+        ).when(pl.col(source_col) == "105").then(  # CFETS
+            pl.col(code_col) + pl.lit(".CFETS")
+        ).otherwise(
+            pl.col(code_col).str.zfill(6) + pl.lit(".") + pl.col(source_col).replace(
+                Mapping.exchange_code_map
+            )
+        )
+
     def get_pcf_files(self, symbol_list: list[str], *, location: str) -> None:
         location_path = self.file_path / location
         if not location_path.exists():
@@ -122,15 +136,7 @@ class ETFPCFFetcher(object):
             pl.col("FundInstrumentID").cast(pl.String).str.zfill(6) + pl.lit(f".{self.sse_tag}")
         )
         component_data = pl.concat(component_data, how="diagonal_relaxed").with_columns(
-            pl.when(pl.col("UnderlyingSecurityID") == "9999").then(  # Other
-                pl.col("InstrumentID")
-            ).when(pl.col("UnderlyingSecurityID") == "103").then(  # HK
-                pl.col("InstrumentID").str.zfill(5) + pl.lit(".HK")
-            ).otherwise(
-                pl.col("InstrumentID").str.zfill(6) + pl.lit(".") + pl.col("UnderlyingSecurityID").replace(
-                    Mapping.exchange_code_map
-                )
-            ),
+            self.convert_underlying_code("InstrumentID", "UnderlyingSecurityID"),
             pl.col("FundInstrumentID").cast(pl.String).str.zfill(6) + pl.lit(f".{self.sse_tag}")
         )
         return info_data, component_data
@@ -162,15 +168,7 @@ class ETFPCFFetcher(object):
             pl.col("SecurityID").cast(pl.String).str.zfill(6) + pl.lit(f".{self.szse_tag}")
         ).drop(["@xmlns", "Version"])
         component_data = pl.concat(component_data, how="diagonal_relaxed").with_columns(
-            pl.when(pl.col("UnderlyingSecurityIDSource") == "9999").then(  # Other
-                pl.col("UnderlyingSecurityID")
-            ).when(pl.col("UnderlyingSecurityIDSource") == "103").then(  # HK
-                pl.col("UnderlyingSecurityID").str.zfill(5) + pl.lit(".HK")
-            ).otherwise(
-                pl.col("UnderlyingSecurityID").str.zfill(6) + pl.lit(".") + pl.col("UnderlyingSecurityIDSource").replace(
-                    Mapping.exchange_code_map
-                )
-            ),
+            self.convert_underlying_code("UnderlyingSecurityID", "UnderlyingSecurityIDSource"),
             pl.col("SecurityID").cast(pl.String).str.zfill(6) + pl.lit(f".{self.szse_tag}")
         )
         return info_data, component_data
@@ -230,7 +228,8 @@ class ETFPCFFetcher(object):
 
 
 if __name__ == '__main__':
-    epf = ETFPCFFetcher()
+    epf = ETFPCFFetcher("20260109")
+    epf.aggregate_data()
     today_date = datetime.now().strftime("%Y%m%d")
     if epf.trade_date == today_date:
         epf.run_today()
