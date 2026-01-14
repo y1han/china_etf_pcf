@@ -228,8 +228,7 @@ class ETFPCFFetcher(object):
 
 
 if __name__ == '__main__':
-    epf = ETFPCFFetcher("20260109")
-    epf.aggregate_data()
+    epf = ETFPCFFetcher()
     today_date = datetime.now().strftime("%Y%m%d")
     if epf.trade_date == today_date:
         epf.run_today()
