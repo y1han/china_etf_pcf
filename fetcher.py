@@ -207,10 +207,7 @@ class ETFPCFFetcher(object):
 
     @staticmethod
     def aggregate_fund_components(comp_sh: pl.DataFrame, comp_sz: pl.DataFrame) -> pl.DataFrame:
-        tmp_comp_sh = Mapping.clean_data(comp_sh, Mapping.comp_sh_map).with_columns(
-            pl.col(ComponentSchema.creation_substitution_cash_amount.name).alias(
-                ComponentSchema.redemption_substitution_cash_amount.name)
-        )
+        tmp_comp_sh = Mapping.clean_data(comp_sh, Mapping.comp_sh_map)
         tmp_comp_sz = Mapping.clean_data(comp_sz, Mapping.comp_sz_map)
         return pl.concat([tmp_comp_sh, tmp_comp_sz], how="diagonal_relaxed")
 
@@ -227,10 +224,18 @@ class ETFPCFFetcher(object):
         return
 
 
-if __name__ == '__main__':
-    epf = ETFPCFFetcher()
+def run_fetcher(trade_date: str | None = None) -> None:
+    epf = ETFPCFFetcher(trade_date)
     today_date = datetime.now().strftime("%Y%m%d")
-    if epf.trade_date == today_date:
-        epf.run_today()
+    if trade_date is None:
+        if epf.trade_date == today_date:
+            epf.run_today()
+        else:
+            raise AttributeError(f"{today_date} Not Trading Day!")
     else:
-        raise AttributeError(f"{today_date} Not Trading Day!")
+        # When trade_date is specified, default to testing aggregate data. (Error will occur if there's no raw PCF file!)
+        epf.aggregate_data()
+
+
+if __name__ == '__main__':
+    run_fetcher()

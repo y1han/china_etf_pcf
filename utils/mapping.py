@@ -71,7 +71,7 @@ class Mapping(object):
         'SubstitutionFlag': ComponentSchema.cash_substitution_flag,
         'CreationPremiumRate': ComponentSchema.creation_premium_rate,
         'RedemptionDiscountRate': ComponentSchema.redemption_discount_rate,
-        'SubstitutionCashAmount': ComponentSchema.creation_substitution_cash_amount,
+        'SubstitutionCashAmount': ComponentSchema.substitution_cash_amount,
         'UnderlyingSecurityID': ComponentSchema.underlying_security_market
     }
 

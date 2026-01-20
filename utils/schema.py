@@ -37,8 +37,9 @@ class ComponentSchema(Enum):
     cash_substitution_flag = auto()  # 现金替代标志
     creation_premium_rate = auto()  # 申购现金替代溢价比例
     redemption_discount_rate = auto()  # 赎回现金替代折价比例
-    creation_substitution_cash_amount = auto()  # 申购替代金额
-    redemption_substitution_cash_amount = auto()  # 赎回替代金额
+    substitution_cash_amount = auto()  # 替代金额（仅沪市）
+    creation_substitution_cash_amount = auto()  # 申购替代金额（仅深市）
+    redemption_substitution_cash_amount = auto()  # 赎回替代金额（仅深市）
     underlying_security_market = auto()  # 挂牌市场
     fund_code = auto()  # ETF代码
     trade_date = auto()  # 交易日
