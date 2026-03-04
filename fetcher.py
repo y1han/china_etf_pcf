@@ -75,6 +75,21 @@ class ETFPCFFetcher(object):
             )
         )
 
+    @staticmethod
+    def urlretrieve_with_retry(url: str, filename: str | Path | None = None,
+                               retries: int = 3, delay: int = 3) -> None:
+        for attempt in range(retries):
+            try:
+                urllib.request.urlretrieve(url=url, filename=filename)
+                return
+            except Exception as e:
+                print(f"URL Retrieve ({url}) Attempt {attempt + 1} failed: {e}. Retrying in {delay} seconds...")
+                if attempt < retries - 1:
+                    time.sleep(delay)
+                else:
+                    raise e
+        return
+
     def get_pcf_files(self, symbol_list: list[str], *, location: str) -> None:
         location_path = self.file_path / location
         if not location_path.exists():
@@ -82,10 +97,10 @@ class ETFPCFFetcher(object):
         for symbol in tqdm(symbol_list):
             start_time = datetime.now()
             if location == self.sse_tag:
-                urllib.request.urlretrieve(self.get_sse_pcf_url(symbol.split(".")[0]), location_path / f"{symbol}.xml")
+                self.urlretrieve_with_retry(self.get_sse_pcf_url(symbol.split(".")[0]), location_path / f"{symbol}.xml")
             elif location == self.szse_tag:
-                urllib.request.urlretrieve(self.get_szse_pcf_url(symbol.split(".")[0], self.trade_date),
-                                           location_path / f"{symbol}.xml")
+                self.urlretrieve_with_retry(self.get_szse_pcf_url(symbol.split(".")[0], self.trade_date),
+                                            location_path / f"{symbol}.xml")
             end_time = datetime.now()
             run_seconds = (end_time - start_time).total_seconds()
             if run_seconds < self.time_gap:
