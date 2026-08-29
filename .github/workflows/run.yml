@@ -2,7 +2,8 @@ name: Run
 on:
   workflow_dispatch:
   schedule:
-    - cron: "0 1 * * 1,2,3,4,5"
+    - cron: "0 9 * * 1-5"
+      timezone: "Asia/Shanghai"
 jobs:
   run:
     runs-on: ubuntu-latest
