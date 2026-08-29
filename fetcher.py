@@ -131,8 +131,11 @@ class ETFPCFFetcher(object):
                 xml_data = tree.getroot()
                 xml_str = ElementTree.tostring(xml_data, encoding="utf-8", method="xml")
 
-                data_dict = dict(xmltodict.parse(xml_str, postprocessor=self.xml_postprocessor))[
-                    "SSEPortfolioCompositionFile"]
+                data_dict = dict(xmltodict.parse(xml_str, postprocessor=self.xml_postprocessor))
+                if "SSEPortfolioCompositionFile" in data_dict:
+                    data_dict = data_dict["SSEPortfolioCompositionFile"]
+                else:
+                    data_dict = data_dict["ETFDefinition"]
                 component_dict = data_dict.pop("ComponentList")["Component"]
                 component_dict = pl.from_records(
                     component_dict if isinstance(component_dict, list) else [component_dict]
