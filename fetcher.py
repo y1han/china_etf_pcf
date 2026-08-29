@@ -134,8 +134,10 @@ class ETFPCFFetcher(object):
                 data_dict = dict(xmltodict.parse(xml_str, postprocessor=self.xml_postprocessor))
                 if "SSEPortfolioCompositionFile" in data_dict:
                     data_dict = data_dict["SSEPortfolioCompositionFile"]
-                else:
+                elif "ETFDefinition" in data_dict:
                     data_dict = data_dict["ETFDefinition"]
+                else:
+                    data_dict = data_dict["ETFConfirmation"]
                 component_dict = data_dict.pop("ComponentList")["Component"]
                 component_dict = pl.from_records(
                     component_dict if isinstance(component_dict, list) else [component_dict]
