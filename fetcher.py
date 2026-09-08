@@ -3,7 +3,7 @@ import time
 import ast
 from pathlib import Path
 from datetime import datetime
-import urllib.request
+import requests
 import shutil
 import xml
 from xml.etree import ElementTree
@@ -76,11 +76,21 @@ class ETFPCFFetcher(object):
         )
 
     @staticmethod
-    def urlretrieve_with_retry(url: str, filename: str | Path | None = None,
-                               retries: int = 3, delay: int = 3) -> None:
+    def urlretrieve_with_retry(url: str, filename: str | Path, retries: int = 3, delay: int = 3) -> None:
         for attempt in range(retries):
             try:
-                urllib.request.urlretrieve(url=url, filename=filename)
+                headers = {
+                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                                  "AppleWebKit/537.36 (KHTML, like Gecko) "
+                                  "Chrome/120.0.0.0 Safari/537.36"
+                }
+
+                response = requests.get(url, headers=headers, stream=True)
+                response.raise_for_status()
+
+                with open(filename, "wb") as file:
+                    for chunk in response.iter_content(chunk_size=8192):
+                        file.write(chunk)
                 return
             except Exception as e:
                 print(f"URL Retrieve ({url}) Attempt {attempt + 1} failed: {e}. Retrying in {delay} seconds...")
