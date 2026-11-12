@@ -30,19 +30,20 @@ class ETFPCFFetcher(object):
         if not self.file_path.exists():
             self.file_path.mkdir(exist_ok=True, parents=True)
 
-    @staticmethod
-    def get_fund_list_df() -> pl.DataFrame:
+    @classmethod
+    def get_fund_list_df(cls) -> pl.DataFrame:
         # return pl.DataFrame(ak.fund_etf_category_sina("ETF基金")).with_columns(
         #     pl.col("代码").str.slice(2, ) + pl.lit(".") + pl.col("代码").str.slice(0, 2).str.to_uppercase()
         # )
-        return pl.DataFrame(ak.fund_etf_category_ths(symbol="ETF")).with_columns((
-                   pl.col("基金代码") + 
-                   pl.when(pl.col("基金代码").str.head(1)=="1").then(
-                       pl.lit(".SZ")
-                   ).otherwise(
-                       pl.lit(".SH")
-                   )
-               ).alias("代码")).sort("代码")
+        return pl.DataFrame(ak.fund_etf_category_ths(symbol="ETF")).with_columns(
+            (
+                    pl.col("基金代码") +
+                    pl.when(pl.col("基金代码").str.head(1) == "1").then(
+                        pl.lit(f".{cls.szse_tag}")
+                    ).otherwise(
+                        pl.lit(f".{cls.sse_tag}")
+                    )
+            ).alias("代码")).filter(pl.col("最新-交易日").is_not_null()).sort("代码")
 
     @staticmethod
     def get_sse_pcf_url(symbol: str) -> str:
