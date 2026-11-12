@@ -43,7 +43,7 @@ class ETFPCFFetcher(object):
                     ).otherwise(
                         pl.lit(f".{cls.sse_tag}")
                     )
-            ).alias("代码")).filter(pl.col("最新-交易日").is_not_null()).sort("代码")
+            ).alias("代码")).filter(pl.col("申购状态").str.len_chars() > 0).sort("代码")
 
     @staticmethod
     def get_sse_pcf_url(symbol: str) -> str:
