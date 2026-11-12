@@ -43,7 +43,7 @@ class ETFPCFFetcher(object):
                     ).otherwise(
                         pl.lit(f".{cls.sse_tag}")
                     )
-            ).alias("代码")).filter(pl.col("申购状态").str.len_chars() > 0).sort("代码")
+            ).alias("代码")).filter(pl.col("最新-交易日").is_not_null()).sort("代码")
 
     @staticmethod
     def get_sse_pcf_url(symbol: str) -> str:
@@ -101,12 +101,16 @@ class ETFPCFFetcher(object):
                     for chunk in response.iter_content(chunk_size=8192):
                         file.write(chunk)
                 return
-            except Exception as e:
-                print(f"URL Retrieve ({url}) Attempt {attempt + 1} failed: {e}. Retrying in {delay} seconds...")
-                if attempt < retries - 1:
-                    time.sleep(delay)
+            except requests.exceptions.RequestException as err:
+                if getattr(err.response, "status_code", None) == 404:
+                    print(f"URL Retrieve ({url}) failed: {err}, but 404 error will be skipped...")
+                    return
                 else:
-                    raise e
+                    print(f"URL Retrieve ({url}) Attempt {attempt + 1} failed: {err}. Retrying in {delay} seconds...")
+                    if attempt < retries - 1:
+                        time.sleep(delay)
+                    else:
+                        raise err
         return
 
     def get_pcf_files(self, symbol_list: list[str], *, location: str) -> None:
@@ -252,10 +256,10 @@ class ETFPCFFetcher(object):
 
     def run_today(self):
         fund_list_df = self.get_fund_list_df()
-        fund_list_df_sse = fund_list_df.filter(pl.col("代码").str.ends_with(self.sse_tag))
         fund_list_df_szse = fund_list_df.filter(pl.col("代码").str.ends_with(self.szse_tag))
-        self.get_pcf_files(fund_list_df_sse["代码"].to_list(), location=self.sse_tag)
+        fund_list_df_sse = fund_list_df.filter(pl.col("代码").str.ends_with(self.sse_tag))
         self.get_pcf_files(fund_list_df_szse["代码"].to_list(), location=self.szse_tag)
+        self.get_pcf_files(fund_list_df_sse["代码"].to_list(), location=self.sse_tag)
         self.compress_into_zip_file()
 
         self.aggregate_data()
