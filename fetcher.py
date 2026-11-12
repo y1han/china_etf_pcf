@@ -32,9 +32,17 @@ class ETFPCFFetcher(object):
 
     @staticmethod
     def get_fund_list_df() -> pl.DataFrame:
-        return pl.DataFrame(ak.fund_etf_category_sina("ETF基金")).with_columns(
-            pl.col("代码").str.slice(2, ) + pl.lit(".") + pl.col("代码").str.slice(0, 2).str.to_uppercase()
-        )
+        # return pl.DataFrame(ak.fund_etf_category_sina("ETF基金")).with_columns(
+        #     pl.col("代码").str.slice(2, ) + pl.lit(".") + pl.col("代码").str.slice(0, 2).str.to_uppercase()
+        # )
+        return pl.DataFrame(ak.fund_etf_category_ths(symbol="ETF")).with_columns((
+                   pl.col("基金代码") + 
+                   pl.when(pl.col("基金代码").str.head(1)=="1").then(
+                       pl.lit(".SZ")
+                   ).otherwise(
+                       pl.lit(".SH")
+                   )
+               ).alias("代码")).sort("代码")
 
     @staticmethod
     def get_sse_pcf_url(symbol: str) -> str:
