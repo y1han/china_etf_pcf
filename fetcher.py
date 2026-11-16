@@ -23,7 +23,7 @@ class ETFPCFFetcher(object):
     szse_tag: str = "SZ"
 
     def __init__(self, trade_date: str | None = None):
-        self.trade_date: str = pl.DataFrame(ak.tool_trade_date_hist_sina()).filter(
+        self.trade_date: str = pl.DataFrame(ak.calendar_trade_date_hist_sina()).filter(
             pl.col("trade_date") <= datetime.now().date()
         )["trade_date"][-1].strftime("%Y%m%d") if trade_date is None else trade_date
         self.file_path: Path = Path("temp") / self.trade_date
