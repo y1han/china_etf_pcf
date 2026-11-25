@@ -163,7 +163,8 @@ class ETFPCFFetcher(object):
                     data_dict = data_dict["ETFConfirmation"]
                 component_dict = data_dict.pop("ComponentList")["Component"]
                 component_dict = pl.from_records(
-                    component_dict if isinstance(component_dict, list) else [component_dict]
+                    component_dict if isinstance(component_dict, list) else [component_dict],
+                    infer_schema_length=500
                 ).with_columns(
                     FundInstrumentID=pl.lit(data_dict["FundInstrumentID"]),
                     TradingDay=pl.lit(data_dict["TradingDay"])
