@@ -200,7 +200,8 @@ class ETFPCFFetcher(object):
             data_dict = dict(xmltodict.parse(xml_str, postprocessor=self.xml_postprocessor))["PCFFile"]
             component_dict = data_dict.pop("Components")["Component"]
             component_dict = pl.from_records(
-                component_dict if isinstance(component_dict, list) else [component_dict]
+                component_dict if isinstance(component_dict, list) else [component_dict],
+                infer_schema_length=500
             ).with_columns(
                 SecurityID=pl.lit(data_dict["SecurityID"]),
                 TradingDay=pl.lit(data_dict["TradingDay"])
@@ -208,7 +209,7 @@ class ETFPCFFetcher(object):
 
             info_data.append(data_dict)
             component_data.append(component_dict)
-        info_data = pl.from_records(info_data).with_columns(
+        info_data = pl.from_records(info_data, infer_schema_length=500).with_columns(
             pl.col("SecurityID").cast(pl.String).str.zfill(6) + pl.lit(f".{self.szse_tag}")
         ).drop(["@xmlns", "Version"])
         component_data = pl.concat(component_data, how="diagonal_relaxed").with_columns(
