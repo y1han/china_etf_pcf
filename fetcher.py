@@ -176,7 +176,7 @@ class ETFPCFFetcher(object):
 
             info_data.append(data_dict)
             component_data.append(component_dict)
-        info_data = pl.from_records(info_data).with_columns(
+        info_data = pl.from_records(info_data, infer_schema_length=500).with_columns(
             pl.col("FundInstrumentID").cast(pl.String).str.zfill(6) + pl.lit(f".{self.sse_tag}")
         )
         component_data = pl.concat(component_data, how="diagonal_relaxed").with_columns(
